@@ -1,0 +1,41 @@
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build Artifacts
+target/
+dist/
+build/
+bin/
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+# Environment & Secrets
+.env
+.env.local
+.env.*.local
+*.log
+
+# Dependencies
+node_modules/
+bower_components/
+venv/
+.venv/
+env/
+.pytest_cache/
+__pycache__/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+.project
+.classpath
+.settings/
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres:5432/vitallens_db}
+    username: ${SPRING_DATASOURCE_USERNAME:vitallens}
+    password: ${SPRING_DATASOURCE_PASSWORD:password}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  security:
+    oauth2:
+      client:
+        registration:
+          whoop:
+            client-id: ${WHOOP_CLIENT_ID}
+            client-secret: ${WHOOP_CLIENT_SECRET}
+            authorization-grant-type: authorization_code
+            redirect-uri: "${WHOOP_REDIRECT_URI:http://localhost:8080/api/v1/recovery/oauth2/callback/whoop}"
+            scope: read:recovery,read:cycles,read:workout,offline
+        provider:
+          whoop:
+            authorization-uri: https://api.prod.whoop.com/oauth/oauth2/auth
+            token-uri: https://api.prod.whoop.com/oauth/oauth2/token
+
+whoop:
+  api:
+    base-url: https://api.prod.whoop.com/developer/v1

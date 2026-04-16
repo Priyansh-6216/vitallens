@@ -1,0 +1,26 @@
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "*"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+          add-to-simple-url-handler-mapping: true
+      routes:
+        - id: recovery-service
+          uri: http://recovery-service:8080
+          predicates:
+            - Path=/api/v1/recovery/**, /api/v1/readiness/**, /api/v1/sleep/**, /api/v1/strain/**
+        - id: ai-coach-service
+          uri: http://ai-coach-service:8000
+          predicates:
+            - Path=/api/v1/ai/**
+server:
+  port: 8080
