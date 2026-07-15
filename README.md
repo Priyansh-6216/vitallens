@@ -1,61 +1,59 @@
-# VitalLens AI 🧬
+# Heart Rate Monitor
 
-VitalLens AI is a production-grade health intelligence platform designed to bridge the gap between complex biometric data and actionable behavioral insights. Inspired by WHOOP, it leverages a distributed microservices architecture to provide real-time recovery analysis and personalized AI coaching.
+A simple web-based heart rate monitor that connects to Bluetooth Low Energy (BLE) heart rate straps and displays real-time heart rate data.
 
-![Dashboard Preview](https://via.placeholder.com/1200x600/1a1c20/00ff88?text=VitalLens+AI+Dashboard+Visuals)
+## Features
 
-## 🌟 Key Features
+- Scan for nearby BLE devices
+- Connect to heart rate monitors (standard Bluetooth Heart Rate Service)
+- Display real-time heart rate in beats per minute (BPM)
+- Visual feedback based on heart rate zones
+- Simple, clean interface built with Tailwind CSS
+- No external dependencies beyond standard Bluetooth profiles
 
-- **Live WHOOP Sync**: Seamlessly integrate your WHOOP recovery metrics via OAuth 2.0.
-- **AI Coach Insights**: Get grounded, scientific explanations for your recovery scores using LLMs (Llama 3 via Groq).
-- **Core Biometrics**: Track HRV (Heart Rate Variability), RHR (Resting Heart Rate), and Sleep Cycles with high-fidelity visualizations.
-- **Secure Persistence**: Enterprise-grade data isolation using per-service PostgreSQL databases.
-- **Event-Driven Architecture**: Fast, reactive updates powered by Kafka.
+## Supported Devices
 
-## 🏗️ Architecture
+This application works with any Bluetooth device that implements the standard Heart Rate Service (0x180D), including:
+- Polar H10, H9, H7
+- Wahoo Tickr, Tickr X, Tickr Fit
+- Garmin HRM-Pro, HRM-Swim, HRM-Tri
+- And many other Bluetooth heart rate straps
 
-VitalLens is built as an asynchronous microservices system:
+## Setup
 
-- **Dashboard Service**: React/Vite/Tailwind frontend with Recharts for premium data visuals.
-- **API Gateway**: Centralized routing and cross-cutting concerns management (Spring Cloud Gateway).
-- **Recovery Service**: The core engine for biometric ingestion and score computation (Spring Boot).
-- **AI Coach Service**: Python/FastAPI service orchestrating LLM reasoning logic and health narratives.
-- **Infrastructure**: Fully containerized using Docker & Docker Compose.
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Docker & Docker Compose
-- Java 17+ (for local development)
-- Node.js 18+ (for local development)
-
-### Setup
-1. **Clone the repository**:
+1. Install Python 3.8+
+2. Clone this repository
+3. Install dependencies:
    ```bash
-   git clone https://github.com/Priyansh-6216/vitallens.git
-   cd vitallens
+   pip install -r requirements.txt
    ```
-
-2. **Configure environment**:
+4. Run the application:
    ```bash
-   cp infra/.env.example infra/.env
-   # Edit infra/.env with your GROQ_API_KEY and WHOOP credentials
+   python app.py
    ```
+5. Open your browser to http://localhost:5000
 
-3. **Launch the platform**:
-   ```bash
-   docker-compose -f infra/docker-compose.yml up --build
-   ```
+## How It Works
 
-4. **Access the Dashboard**:
-   Open [http://localhost:5173](http://localhost:5173) in your browser.
+1. The application uses the [Bleak](https://github.com/hbldh/bleak) library to communicate with Bluetooth Low Energy devices
+2. It scans for nearby BLE devices advertising standard services
+3. When you select a device, it connects and subscribes to the Heart Rate Measurement characteristic (0x2A37)
+4. Heart rate data is parsed according to the Bluetooth SIG specification
+5. The web interface updates in real-time via AJAX polling
 
-## 🛠️ Tech Stack
+## Data Privacy
 
-- **Backend**: Spring Boot 3.1, Java 17, Python 3.10, FastAPI
-- **Frontend**: React, Vite, Recharts, Lucide Icons
-- **Data & Ops**: PostgreSQL, Redis, Kafka, Docker
-- **AI**: Groq API (Llama 3-70B)
+- All data processing happens locally on your device
+- No data is sent to external servers
+- Bluetooth connections are direct between your computer and the heart rate monitor
+- No personal information is collected or stored
 
-## 📝 License
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+## Requirements
+
+- Python 3.8+
+- Bluetooth 4.0+ hardware on your computer
+- A Bluetooth heart rate monitor that supports the standard Heart Rate Service
+
+## License
+
+MIT License
