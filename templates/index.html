@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Heart Rate Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center pt-10">
+    <div class="bg-white rounded-xl shadow-md w-full max-w-xl p-8">
+        <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">
+            Heart Rate Monitor
+        </h1>
+
+        <div id="status" class="mb-6 p-4 bg-blue-50 rounded-lg text-center">
+            <p id="status-text" class="text-gray-700">
+                Click "Scan Devices" to find heart rate monitors nearby
+            </p>
+        </div>
+
+        <div class="mb-6">
+            <button id="scanBtn"
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    id="scan-btn">
+                Scan Devices
+            </button>
+        </div>
+
+        <div class="mb-4">
+            <select id="deviceList"
+                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled>
+                <option value="">Select a device to connect</option>
+            </select>
+        </div>
+
+        <div class="mb-4">
+            <button id="connectBtn"
+                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    disabled>
+                Connect
+            </button>
+        </div>
+
+        <div id="heartRateDisplay" class="text-center mt-8 hidden">
+            <div class="text-6xl font-bold text-gray-800" id="hr-value">--</div>
+            <div class="mt-2 text-lg text-gray-600">BPM</div>
+            <div id="hr-status" class="mt-4 text-sm text-gray-500">
+                Waiting for heart rate data...
+            </div>
+        </div>
+
+        <div class="mt-6">
+            <button id="disconnectBtn"
+                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    disabled>
+                Disconnect
+            </button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const scanBtn = document.getElementById('scanBtn');
+            const deviceList = document.getElementById('deviceList');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const statusText = document.getElementById('status-text');
+            const hrValue = document.getElementById('hr-value');
+            const hrStatus = document.getElementById('hr-status');
+            const heartRateDisplay = document.getElementById('heartRateDisplay');
+
+            let pollingInterval = null;
+            let selectedDeviceAddress = null;
+
+            // Scan for devices
+            scanBtn.addEventListener('click', async () => {
+                scanBtn.disabled = true;
+                statusText.textContent = 'Scanning for devices...';
+                scanBtn.classList.add('opacity-50');
+
+                try {
+                    const response = await fetch('/api/scan');
+                    const devices = await response.json();
+
+                    // Clear and populate device list
+                    deviceList.innerHTML = '<option value="">Select a device to connect</option>';
+
+                    if (devices.length === 0) {
+                        statusText.textContent = 'No devices found. Make sure your heart rate monitor is on and nearby.';
+                    } else {
+                        devices.forEach(device => {
+                            // Filter for likely HRM devices (you might want to refine this)
+                            const name = device.name || 'Unknown Device';
+                            const option = document.createElement('option');
+                            option.value = device.address;
+                            option.textContent = `${name} (${device.address.substring(0, 8)}...) - RSSI: ${device.rssi}dBm`;
+                            deviceList.appendChild(option);
+                        });
+                        statusText.textContent = `Found ${devices.length} device(s). Select one to connect.`;
+                    }
+
+                    deviceList.disabled = false;
+                } catch (error) {
+                    console.error('Error scanning:', error);
+                    statusText.textContent = 'Error scanning for devices. Please try again.';
+                } finally {
+                    scanBtn.disabled = false;
+                    scanBtn.classList.remove('opacity-50');
+                }
+            });
+
+            // Enable connect button when device selected
+            deviceList.addEventListener('change', () => {
+                connectBtn.disabled = !deviceList.value;
+                if (deviceList.value) {
+                    selectedDeviceAddress = deviceList.value;
+                }
+            });
+
+            // Connect to device
+            connectBtn.addEventListener('click', async () => {
+                if (!selectedDeviceAddress) return;
+
+                connectBtn.disabled = true;
+                connectBtn.textContent = 'Connecting...';
+                statusText.textContent = `Connecting to device...`;
+
+                try {
+                    const response = await fetch(`/api/connect/${selectedDeviceAddress}`);
+                    const result = await response.json();
+
+                    if (result.success) {
+                        statusText.textContent = `Connected! Monitoring heart rate...`;
+                        heartRateDisplay.classList.remove('hidden');
+                        hrStatus.textContent = 'Receiving data...';
+
+                        // Start polling for heart rate
+                        pollingInterval = setInterval(async () => {
+                            try {
+                                const hrResponse = await fetch('/api/heart_rate');
+                                const hrData = await hrResponse.json();
+                                hrValue.textContent = hrData.heart_rate || '--';
+
+                                if (hrData.monitoring) {
+                                    hrStatus.textContent = 'Monitoring heart rate...';
+                                    if (hrData.heart_rate > 0) {
+                                        hrStatus.textContent = `Heart rate: ${hrData.heart_rate} bpm`;
+                                        // Change color based on heart rate zones
+                                        if (hrData.heart_rate < 60) {
+                                            hrValue.className = 'text-6xl font-bold text-blue-600';
+                                        } else if (hrData.heart_rate > 100) {
+                                            hrValue.className = 'text-6xl font-bold text-red-600';
+                                        } else {
+                                            hrValue.className = 'text-6xl font-bold text-green-600';
+                                        }
+                                    }
+                                } else {
+                                    hrStatus.textContent = 'Connected but not receiving data...';
+                                }
+                            } catch (error) {
+                                console.error('Error fetching heart rate:', error);
+                                hrStatus.textContent = 'Error reading heart rate data';
+                            }
+                        }, 1000); // Poll every second
+
+                        // Enable disconnect button
+                        disconnectBtn.disabled = false;
+                    } else {
+                        statusText.textContent = 'Failed to connect to device. Please try again.';
+                    }
+                } catch (error) {
+                    console.error('Error connecting:', error);
+                    statusText.textContent = 'Error connecting to device';
+                } finally {
+                    connectBtn.disabled = false;
+                    connectBtn.textContent = 'Connect';
+                }
+            });
+
+            // Disconnect from device
+            disconnectBtn.addEventListener('click', async () => {
+                disconnectBtn.disabled = true;
+                disconnectBtn.textContent = 'Disconnecting...';
+                statusText.textContent = 'Disconnecting...';
+
+                try {
+                    await fetch('/api/disconnect');
+
+                    // Stop polling
+                    if (pollingInterval) {
+                        clearInterval(pollingInterval);
+                        pollingInterval = null;
+                    }
+
+                    // Reset UI
+                    statusText.textContent = 'Disconnected. Ready to scan for devices.';
+                    heartRateDisplay.classList.add('hidden');
+                    hrValue.textContent = '--';
+                    hrValue.className = 'text-6xl font-bold text-gray-800';
+                    hrStatus.textContent = 'Waiting for heart rate data...';
+                    connectBtn.disabled = false;
+                    deviceList.disabled = false;
+                    disconnectBtn.disabled = true;
+
+                } catch (error) {
+                    console.error('Error disconnecting:', error);
+                    statusText.textContent = 'Error disconnecting';
+                } finally {
+                    disconnectBtn.disabled = false;
+                    disconnectBtn.textContent = 'Disconnect';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
