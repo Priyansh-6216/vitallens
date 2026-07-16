@@ -5,62 +5,108 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Heart Rate Monitor</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col items-center pt-10">
-    <div class="bg-white rounded-xl shadow-md w-full max-w-xl p-8">
+    <div class="bg-white rounded-xl shadow-md w-full max-w-4xl p-6">
         <h1 class="text-3xl font-bold text-center mb-6 text-gray-800">
             Heart Rate Monitor
         </h1>
 
-        <div id="status" class="mb-6 p-4 bg-blue-50 rounded-lg text-center">
-            <p id="status-text" class="text-gray-700">
-                Click "Scan Devices" to find heart rate monitors nearby
-            </p>
-        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <!-- Status and Controls -->
+            <div class="space-y-4">
+                <div id="status" class="p-4 bg-blue-50 rounded-lg">
+                    <p id="status-text" class="text-gray-700">
+                        Click "Scan Devices" to find heart rate monitors nearby
+                    </p>
+                </div>
 
-        <div class="mb-6">
-            <button id="scanBtn"
-                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-                    id="scan-btn">
-                Scan Devices
-            </button>
-        </div>
+                <div class="space-y-3">
+                    <button id="scanBtn"
+                            class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                        Scan Devices
+                    </button>
+                </div>
 
-        <div class="mb-4">
-            <select id="deviceList"
-                    class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled>
-                <option value="">Select a device to connect</option>
-            </select>
-        </div>
+                <div>
+                    <select id="deviceList"
+                            class="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            disabled>
+                        <option value="">Select a device to connect</option>
+                    </select>
+                </div>
 
-        <div class="mb-4">
-            <button id="connectBtn"
-                    class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-                    disabled>
-                Connect
-            </button>
-        </div>
+                <div class="flex space-x-2">
+                    <button id="connectBtn"
+                            class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                            disabled>
+                        Connect
+                    </button>
+                    <button id="disconnectBtn"
+                            class="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-md transition-colors"
+                            disabled>
+                        Disconnect
+                    </button>
+                </div>
+            </div>
 
-        <div id="heartRateDisplay" class="text-center mt-8 hidden">
-            <div class="text-6xl font-bold text-gray-800" id="hr-value">--</div>
-            <div class="mt-2 text-lg text-gray-600">BPM</div>
-            <div id="hr-status" class="mt-4 text-sm text-gray-500">
-                Waiting for heart rate data...
+            <!-- Live HR Display -->
+            <div class="text-center space-y-4">
+                <div id="heartRateDisplay" class="hidden">
+                    <div class="text-5xl font-bold" id="hr-value">--</div>
+                    <div class="text-lg text-gray-600">BPM</div>
+                    <div id="hr-status" class="mt-2 text-sm text-gray-500">
+                        Waiting for heart rate data...
+                    </div>
+                    <div id="hrv-display" class="mt-4 space-x-4 text-sm justify-center">
+                        <div>SDNN: <span id="sdnn-value">--</span> ms</div>
+                        <div>RMSSD: <span id="rmssd-value">--</span> ms</div>
+                        <div>pNN50: <span id="pnn50-value">--</span> %</div>
+                    </div>
+                </div>
+
+                <div id="noDeviceMessage" class="text-center py-8">
+                    <p class="text-gray-500">Connect a device to see real-time heart rate</p>
+                </div>
             </div>
         </div>
 
-        <div class="mt-6">
-            <button id="disconnectBtn"
-                    class="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
-                    disabled>
-                Disconnect
-            </button>
+        <!-- Charts Section -->
+        <div class="grid grid-cols-1 gap-6">
+            <!-- Heart Rate Chart -->
+            <div class="bg-white rounded-xl shadow-md p-4">
+                <h2 class="text-xl font-bold mb-4 text-gray-800">Heart Rate Trends</h2>
+                <div class="relative">
+                    <canvas id="hrChart" height="180"></canvas>
+                </div>
+                <div class="flex justify-between mt-2 text-sm text-gray-500">
+                    <button id="hr1h" class="px-3 py-1 bg-blue-100 rounded hover:bg-blue-200">1H</button>
+                    <button id="hr6h" class="px-3 py-1 bg-blue-100 rounded hover:bg-blue-200">6H</button>
+                    <button id="hr24h" class="px-3 py-1 bg-blue-100 rounded hover:bg-blue-200">24H</button>
+                    <button id="hrAll" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">ALL</button>
+                </div>
+            </div>
+
+            <!-- HRV Chart -->
+            <div class="bg-white rounded-xl shadow-md p-4">
+                <h2 class="text-xl font-bold mb-4 text-gray-800">HRV (RMSSD) Trends</h2>
+                <div class="relative">
+                    <canvas id="hrvChart" height="180"></canvas>
+                </div>
+                <div class="flex justify-between mt-2 text-sm text-gray-500">
+                    <button id="hrv1h" class="px-3 py-1 bg-purple-100 rounded hover:bg-purple-200">1H</button>
+                    <button id="hrv6h" class="px-3 py-1 bg-purple-100 rounded hover:bg-purple-200">6H</button>
+                    <button id="hrv24h" class="px-3 py-1 bg-purple-100 rounded hover:bg-purple-200">24H</button>
+                    <button id="hrvAll" class="px-3 py-1 bg-purple-500 text-white rounded hover:bg-purple-600">ALL</button>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // DOM Elements
             const scanBtn = document.getElementById('scanBtn');
             const deviceList = document.getElementById('deviceList');
             const connectBtn = document.getElementById('connectBtn');
@@ -69,9 +115,171 @@
             const hrValue = document.getElementById('hr-value');
             const hrStatus = document.getElementById('hr-status');
             const heartRateDisplay = document.getElementById('heartRateDisplay');
+            const noDeviceMessage = document.getElementById('noDeviceMessage');
+            const sdnnValue = document.getElementById('sdnn-value');
+            const rmssdValue = document.getElementById('rmssd-value');
+            const pnn50Value = document.getElementById('pnn50-value');
+
+            // Chart Buttons
+            const hr1hBtn = document.getElementById('hr1h');
+            const hr6hBtn = document.getElementById('hr6h');
+            const hr24hBtn = document.getElementById('hr24h');
+            const hrAllBtn = document.getElementById('hrAll');
+            const hrv1hBtn = document.getElementById('hrv1h');
+            const hrv6hBtn = document.getElementById('hrv6h');
+            const hrv24hBtn = document.getElementById('hrv24h');
+            const hrvAllBtn = document.getElementById('hrvAll');
 
             let pollingInterval = null;
             let selectedDeviceAddress = null;
+            let hrChart = null;
+            let hrvChart = null;
+            let chartUpdateInterval = null;
+
+            // Initialize charts
+            function initCharts() {
+                const hrCtx = document.getElementById('hrChart').getContext('2d');
+                const hrvCtx = document.getElementById('hrvChart').getContext('2d');
+
+                hrChart = new Chart(hrCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Heart Rate (BPM)',
+                            data: [],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                            tension: 0.1,
+                            fill: true,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', },
+                            title: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: false, suggestedMin: 40, suggestedMax: 120 }
+                        }
+                    }
+                });
+
+                hrvChart = new Chart(hrvCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'HRV (RMSSD ms)',
+                            data: [],
+                            borderColor: 'rgb(147, 112, 219)',
+                            backgroundColor: 'rgba(147, 112, 219, 0.2)',
+                            tension: 0.1,
+                            fill: true,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top', },
+                            title: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: true }
+                        }
+                    }
+                });
+            }
+
+            // Update charts with new data
+            function updateChart(chart, labels, data) {
+                chart.data.labels = labels;
+                chart.data.datasets[0].data = data;
+                chart.update('none'); // Don't animate for smooth updates
+            }
+
+            // Fetch and update heart rate chart
+            async function updateHeartRateChart(hours = 24) {
+                try {
+                    const response = await fetch(`/api/heart_rate/history?limit=1000`);
+                    const data = await response.json();
+
+                    // Filter by time if needed
+                    const now = new Date();
+                    const cutoff = new Date(now.getTime() - (hours * 60 * 60 * 1000));
+
+                    const filtered = data.filter(item =>
+                        new Date(item.timestamp) >= cutoff
+                    ).reverse(); // Oldest first for chart
+
+                    const labels = filtered.map(item => {
+                        const date = new Date(item.timestamp);
+                        return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    });
+                    const values = filtered.map(item => item.heart_rate);
+
+                    updateChart(hrChart, labels, values);
+                } catch (error) {
+                    console.error('Error updating HR chart:', error);
+                }
+            }
+
+            // Fetch and update HRV chart
+            async function updateHRVChart(hours = 24) {
+                try {
+                    const response = await fetch(`/api/hrv/history?limit=1000`);
+                    const data = await response.json();
+
+                    // Filter by time if needed
+                    const now = new Date();
+                    const cutoff = new Date(now.getTime() - (hours * 60 * 60 * 1000));
+
+                    const filtered = data.filter(item =>
+                        new Date(item.timestamp) >= cutoff
+                    ).reverse(); // Oldest first for chart
+
+                    const labels = filtered.map(item => {
+                        const date = new Date(item.timestamp);
+                        return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    });
+                    const values = filtered.map(item => item.rmssd); // Using RMSSD for HRV chart
+
+                    updateChart(hrvChart, labels, values);
+                } catch (error) {
+                    console.error('Error updating HRV chart:', error);
+                }
+            }
+
+            // Set up chart update interval (every 30 seconds)
+            function setupChartUpdates() {
+                if (chartUpdateInterval) clearInterval(chartUpdateInterval);
+                chartUpdateInterval = setInterval(() => {
+                    updateHeartRateChart(24);
+                    updateHRVChart(24);
+                }, 30000);
+
+                // Initial load
+                updateHeartRateChart(24);
+                updateHRVChart(24);
+            }
+
+            // Chart button handlers
+            function setupChartButtonHandlers() {
+                // Heart rate buttons
+                hr1hBtn.addEventListener('click', () => updateHeartRateChart(1));
+                hr6hBtn.addEventListener('click', () => updateHeartRateChart(6));
+                hr24hBtn.addEventListener('click', () => updateHeartRateChart(24));
+                hrAllBtn.addEventListener('click', () => updateHeartRateChart(1000)); // Large number for all
+
+                // HRV buttons
+                hrv1hBtn.addEventListener('click', () => updateHRVChart(1));
+                hrv6hBtn.addEventListener('click', () => updateHRVChart(6));
+                hrv24hBtn.addEventListener('click', () => updateHRVChart(24));
+                hrvAllBtn.addEventListener('click', () => updateHRVChart(1000)); // Large number for all
+            }
 
             // Scan for devices
             scanBtn.addEventListener('click', async () => {
@@ -135,7 +343,7 @@
                         heartRateDisplay.classList.remove('hidden');
                         hrStatus.textContent = 'Receiving data...';
 
-                        // Start polling for heart rate
+                        // Start polling for heart rate and HRV
                         pollingInterval = setInterval(async () => {
                             try {
                                 const hrResponse = await fetch('/api/heart_rate');
@@ -158,8 +366,17 @@
                                 } else {
                                     hrStatus.textContent = 'Connected but not receiving data...';
                                 }
+
+                                // Also fetch latest HRV
+                                const hrvResponse = await fetch('/api/hrv/latest');
+                                const hrvData = await hrvResponse.json();
+                                if (!hrvData.error) {
+                                    sdnnValue.textContent = hrvData.sdnn?.toFixed(1) || '--';
+                                    rmssdValue.textContent = hrvData.rmssd?.toFixed(1) || '--';
+                                    pnn50Value.textContent = hrvData.pnn50?.toFixed(1) || '--';
+                                }
                             } catch (error) {
-                                console.error('Error fetching heart rate:', error);
+                                console.error('Error fetching heart rate/HRV:', error);
                                 hrStatus.textContent = 'Error reading heart rate data';
                             }
                         }, 1000); // Poll every second
@@ -199,6 +416,9 @@
                     hrValue.textContent = '--';
                     hrValue.className = 'text-6xl font-bold text-gray-800';
                     hrStatus.textContent = 'Waiting for heart rate data...';
+                    sdnnValue.textContent = '--';
+                    rmssdValue.textContent = '--';
+                    pnn50Value.textContent = '--';
                     connectBtn.disabled = false;
                     deviceList.disabled = false;
                     disconnectBtn.disabled = true;
@@ -211,6 +431,11 @@
                     disconnectBtn.textContent = 'Disconnect';
                 }
             });
+
+            // Initialize
+            initCharts();
+            setupChartButtonHandlers();
+            setupChartUpdates();
         });
     </script>
 </body>
