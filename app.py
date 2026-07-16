@@ -228,8 +228,8 @@ async def disconnect_from_device():
 
     if current_client and current_client.is_connected:
         try:
-            await client.stop_notify(HRM_CHARACTERISTIC_UUID)
-            await client.disconnect()
+            await current_client.stop_notify(HRM_CHARACTERISTIC_UUID)
+            await current_client.disconnect()
             print("Disconnected from device")
         except Exception as e:
             print(f"Disconnection error: {e}")
@@ -282,6 +282,22 @@ def get_latest_hrv():
             return jsonify(latest.to_dict())
         else:
             return jsonify({"error": "No HRV data available"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        db.close()
+
+@app.route('/api/hrv/history')
+def get_hrv_history():
+    """Get HRV history with optional limit"""
+    limit = request.args.get('limit', 100, type=int)
+    db = SessionLocal()
+    try:
+        readings = db.query(HRVMetrics)\
+                    .order_by(HRVMetrics.timestamp.desc())\
+                    .limit(limit)\
+                    .all()
+        return jsonify([r.to_dict() for r in reversed(readings)])  # Oldest first for charts
     except Exception as e:
         return jsonify({"error": str(e)}), 500
     finally:
