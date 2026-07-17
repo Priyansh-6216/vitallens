@@ -1,4 +1,4 @@
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, make_response
 from flask_cors import CORS
 import asyncio
 import threading
@@ -167,6 +167,44 @@ def disconnect():
 @app.route('/api/heart_rate')
 def get_heart_rate():
     return jsonify({'heart_rate': heart_rate, 'monitoring': is_monitoring})
+
+@app.route('/api/export/csv')
+def export_csv():
+    """Export heart rate data as CSV"""
+    try:
+        if not os.path.exists(data_file_path):
+            return jsonify({"error": "No data available"}), 404
+
+        # Read the CSV file and return it
+        with open(data_file_path, 'r') as f:
+            content = f.read()
+
+        response = make_response(content)
+        response.headers["Content-Disposition"] = f"attachment; filename=heart_rate_data.csv"
+        response.headers["Content-Type"] = "text/csv"
+        return response
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/export/json')
+def export_json():
+    """Export heart rate data as JSON"""
+    try:
+        if not os.path.exists(data_file_path):
+            return jsonify({"error": "No data available"}), 404
+
+        # Read CSV and convert to JSON
+        data = []
+        with open(data_file_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                data.append(row)
+
+        response = jsonify(data)
+        response.headers["Content-Disposition"] = "attachment; filename=heart_rate_data.json"
+        return response
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
