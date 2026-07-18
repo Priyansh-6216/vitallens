@@ -1,8 +1,10 @@
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, make_response
 from flask_cors import CORS
 import asyncio
 import threading
 import time
+import csv
+import os
 from datetime import datetime
 from bleak import BleakScanner, BleakClient
 from sqlalchemy import create_engine, Column, Integer, Float, DateTime, String
@@ -318,6 +320,81 @@ def get_heart_rate_history():
         return jsonify({"error": str(e)}), 500
     finally:
         db.close()
+
+@app.route('/api/export/csv')
+def export_csv():
+    """Export heart rate data as CSV"""
+    try:
+        db = SessionLocal()
+        try:
+            # Get all heart rate readings from database
+            readings = db.query(HeartRateReading).order_by(HeartRateReading.timestamp).all()
+            
+            if not readings:
+                return jsonify({"error": "No data available"}), 404
+            
+            # Create CSV content
+            output = []
+            output.append(['timestamp', 'heart_rate_bpm'])
+            for r in readings:
+                output.append([r.timestamp.isoformat(), r.heart_rate])
+            
+            # Convert to CSV string
+            import io
+            stream = io.StringIO()
+            writer = csv.writer(stream)
+            writer.writerows(output)
+            csv_content = stream.getvalue()
+            
+            response = make_response(csv_content)
+            response.headers["Content-Disposition"] = "attachment; filename=heart_rate_data.csv"
+            response.headers["Content-Type"] = "text/csv"
+            return response
+        finally:
+            db.close()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/export/json')
+def export_json():
+    """Export heart rate data as JSON"""
+    try:
+        db = SessionLocal()
+        try:
+            # Get all heart rate readings from database
+            readings = db.query(HeartRateReading).order_by(HeartRateReading.timestamp).all()
+            
+            if not readings:
+                return jsonify({"error": "No data available"}), 404
+            
+            # Convert to list of dictionaries
+            data = [r.to_dict() for r in readings]
+            
+            response = jsonify(data)
+            response.headers["Content-Disposition"] = "attachment; filename=heart_rate_data.json"
+            return response
+        finally:
+            db.close()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/clear_data', methods=['POST', 'DELETE', 'GET'])
+def clear_data():
+    """Clear all health history data from the database"""
+    try:
+        db = SessionLocal()
+        try:
+            db.query(HeartRateReading).delete()
+            db.query(HRVMetrics).delete()
+            db.commit()
+            return jsonify({"success": True, "message": "All data cleared successfully"})
+        except Exception as e:
+            db.rollback()
+            return jsonify({"error": str(e)}), 500
+        finally:
+            db.close()
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

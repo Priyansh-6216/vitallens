@@ -28,6 +28,19 @@
                         Scan Devices
                     </button>
                 </div>
+                <div class="space-y-2">
+                    <div class="flex space-x-2">
+                        <button id="exportCsvBtn"
+                                class="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                            Export CSV
+                        </button>
+                        <button id="exportJsonBtn"
+                                class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md transition-colors">
+                            Export JSON
+                        </button>
+                    </div>
+                    <p id="export-status" class="mt-2 text-sm text-gray-500"></p>
+                </div>
 
                 <div>
                     <select id="deviceList"
@@ -111,7 +124,10 @@
             const deviceList = document.getElementById('deviceList');
             const connectBtn = document.getElementById('connectBtn');
             const disconnectBtn = document.getElementById('disconnectBtn');
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+            const exportJsonBtn = document.getElementById('exportJsonBtn');
             const statusText = document.getElementById('status-text');
+            const exportStatus = document.getElementById('export-status');
             const hrValue = document.getElementById('hr-value');
             const hrStatus = document.getElementById('hr-status');
             const heartRateDisplay = document.getElementById('heartRateDisplay');
@@ -281,6 +297,16 @@
                 hrvAllBtn.addEventListener('click', () => updateHRVChart(1000)); // Large number for all
             }
 
+            // Update button states based on connection status
+            function updateButtonStates() {
+                const isConnected = !!selectedDeviceAddress;
+                connectBtn.disabled = isConnected;
+                disconnectBtn.disabled = !isConnected;
+                exportCsvBtn.disabled = !isConnected;
+                exportJsonBtn.disabled = !isConnected;
+                deviceList.disabled = isConnected;
+            }
+
             // Scan for devices
             scanBtn.addEventListener('click', async () => {
                 scanBtn.disabled = true;
@@ -309,6 +335,7 @@
                     }
 
                     deviceList.disabled = false;
+                    updateButtonStates();
                 } catch (error) {
                     console.error('Error scanning:', error);
                     statusText.textContent = 'Error scanning for devices. Please try again.';
@@ -320,10 +347,8 @@
 
             // Enable connect button when device selected
             deviceList.addEventListener('change', () => {
-                connectBtn.disabled = !deviceList.value;
-                if (deviceList.value) {
-                    selectedDeviceAddress = deviceList.value;
-                }
+                selectDeviceAddress = deviceList.value;
+                updateButtonStates();
             });
 
             // Connect to device
@@ -382,7 +407,7 @@
                         }, 1000); // Poll every second
 
                         // Enable disconnect button
-                        disconnectBtn.disabled = false;
+                        updateButtonStates();
                     } else {
                         statusText.textContent = 'Failed to connect to device. Please try again.';
                     }
@@ -392,6 +417,7 @@
                 } finally {
                     connectBtn.disabled = false;
                     connectBtn.textContent = 'Connect';
+                    updateButtonStates();
                 }
             });
 
@@ -422,17 +448,96 @@
                     connectBtn.disabled = false;
                     deviceList.disabled = false;
                     disconnectBtn.disabled = true;
+                    updateButtonStates();
 
                 } catch (error) {
                     console.error('Error disconnecting:', error);
                     statusText.textContent = 'Error disconnecting';
                 } finally {
-                    disconnectBtn.disabled = false;
+                    disabled = false;
                     disconnectBtn.textContent = 'Disconnect';
+                    updateButtonStates();
                 }
             });
 
+            // Export CSV function
+            async function exportCSV() {
+                const exportStatus = document.getElementById('export-status');
+                exportStatus.textContent = 'Exporting CSV...';
+                exportStatus.className = 'mt-2 text-sm text-blue-600';
+
+                try {
+                    const response = await fetch('/api/export/csv');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'heart_rate_data.csv';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+
+                    exportStatus.textContent = 'CSV exported successfully!';
+                    exportStatus.className = 'mt-2 text-sm text-green-600';
+
+                    // Clear status after 3 seconds
+                    setTimeout(() => {
+                        exportStatus.textContent = '';
+                    }, 3000);
+                } catch (error) {
+                    console.error('Error exporting CSV:', error);
+                    exportStatus.textContent = 'Error exporting CSV';
+                    exportStatus.className = 'mt-2 text-sm text-red-600';
+                }
+            }
+
+            // Export JSON function
+            async function exportJSON() {
+                const exportStatus = document.getElementById('export-status');
+                exportStatus.textContent = 'Exporting JSON...';
+                exportStatus.className = 'mt-2 text-sm text-blue-600';
+
+                try {
+                    const response = await fetch('/api/export/json');
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = 'heart_rate_data.json';
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+
+                    exportStatus.textContent = 'JSON exported successfully!';
+                    exportStatus.className = 'mt-2 text-sm text-green-600';
+
+                    // Clear status after 3 seconds
+                    setTimeout(() => {
+                        exportStatus.textContent = '';
+                    }, 3000);
+                } catch (error) {
+                    console.error('Error exporting JSON:', error);
+                    exportStatus.textContent = 'Error exporting JSON';
+                    exportStatus.className = 'mt-2 text-sm text-red-600';
+                }
+            }
+
+            // Export button event listeners
+            exportCsvBtn.addEventListener('click', exportCSV);
+            exportJsonBtn.addEventListener('click', exportJSON);
+
             // Initialize
+            updateButtonStates();
             initCharts();
             setupChartButtonHandlers();
             setupChartUpdates();
