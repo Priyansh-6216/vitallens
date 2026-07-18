@@ -39,3 +39,6 @@ __pycache__/
 # OS
 .DS_Store
 Thumbs.db
+
+# LLM Context
+LLM_CONTEXT.md
