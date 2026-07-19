@@ -34,9 +34,18 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
 
+  # State management
+  provider: ^6.0.0
+
   # Local database for storing heart rate and HRV data
   sqflite: ^2.0.0+1
   path: ^1.8.0
+
+  # For charts and graphs
+  fl_chart: ^0.62.0
+
+  # For Bluetooth LE (will be used in Day 3)
+  flutter_blue_plus: ^1.2.0
 
 dev_dependencies:
   flutter_test:
