@@ -7,6 +7,7 @@ import '../widgets/heart_rate_chart.dart';
 import '../widgets/hrv_metrics_card.dart';
 import '../widgets/control_buttons.dart';
 import '../services/database_service.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -123,6 +124,10 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
+                  // Connection status
+                  _buildConnectionStatus(heartRateProvider),
+                  const SizedBox(height: 16),
+                  
                   // Current heart rate display
                   HeartRateDisplay(
                     heartRate: heartRateProvider.currentHeartRate,
@@ -141,7 +146,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: heartRateProvider.heartRateData.isEmpty
                         ? const Center(
                             child: Text(
-                              'No data available\nTap "Add Sample Data" to see demo',
+                              'No data available\nTap "Scan for Devices" to connect a heart rate monitor',
                               textAlign: TextAlign.center,
                             ),
                           )
@@ -165,13 +170,43 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                   const SizedBox(height: 24),
                   
-                  // Control buttons and sample data button
+                  // Control buttons and BLE controls
                   Column(
                     children: [
                       ControlButtons(
                         isMonitoring: heartRateProvider.isMonitoring,
                         onStart: heartRateProvider.startMonitoring,
                         onStop: heartRateProvider.stopMonitoring,
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: heartRateProvider.isScanning
+                                ? null
+                                : () => _startScan(heartRateProvider),
+                            icon: Icon(heartRateProvider.isScanning
+                                ? Icons.stop
+                                : Icons.bluetooth_searching),
+                            label: Text(heartRateProvider.isScanning
+                                ? 'Stop Scanning'
+                                : 'Scan for Devices'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          if (heartRateProvider.isConnected)
+                            ElevatedButton.icon(
+                              onPressed: () => _disconnectDevice(heartRateProvider),
+                              icon: const Icon(Icons.bluetooth_connected),
+                              label: const Text('Disconnect'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
@@ -188,6 +223,66 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
     );
+  }
+
+  Widget _buildConnectionStatus(HeartRateProvider provider) {
+    if (provider.isScanning) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        backgroundColor: Colors.blue.shade50,
+        borderRadius: BorderRadius.circular(8),
+        child: const Row(
+          children: [
+            Icon(Icons.bluetooth_searching, color: Colors.blue),
+            SizedBox(width: 8),
+            Text(
+              'Scanning for heart rate monitors...',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+            ),
+          ],
+        ),
+      );
+    } else if (provider.isConnected) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        backgroundColor: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(8),
+        child: const Row(
+          children: [
+            Icon(Icons.favorite, color: Colors.green),
+            SizedBox(width: 8),
+            Text(
+              'Connected to Heart Rate Monitor',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        backgroundColor: Colors.grey.shade200,
+        borderRadius: BorderRadius.circular(8),
+        child: const Row(
+          children: [
+            Icon(Icons.bluetooth_disabled, color: Colors.grey),
+            SizedBox(width: 8),
+            Text(
+              'No device connected',
+              style: TextStyle(color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  Future<void> _startScan(HeartRateProvider provider) async {
+    await provider.startScan();
+  }
+
+  Future<void> _disconnectDevice(HeartRateProvider provider) async {
+    await provider.disconnect();
   }
 
   List<FlSpot> _convertToFlSpots(List<HeartRateData> heartRateData) {

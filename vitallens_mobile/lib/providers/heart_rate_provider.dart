@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
+import '../services/bluetooth_service.dart';
 
 class HeartRateData {
   final int heartRate;
@@ -19,14 +20,25 @@ class HeartRateData {
 
 class HeartRateProvider extends ChangeNotifier {
   final DatabaseService _dbService = DatabaseService();
+  late final BluetoothService _bluetoothService;
   List<HeartRateData> _heartRateData = [];
   bool _isMonitoring = false;
   int _currentHeartRate = 0;
   bool _isInitialized = false;
+  bool _isScanning = false;
+  bool _isConnected = false;
+  List<ScanResult> _scanResults = [];
 
   List<HeartRateData> get heartRateData => List.unmodifiable(_heartRateData);
   bool get isMonitoring => _isMonitoring;
   int get currentHeartRate => _currentHeartRate;
+  bool get isScanning => _isScanning;
+  bool get isConnected => _isConnected;
+  List<ScanResult> get scanResults => List.unmodifiable(_scanResults);
+
+  HeartRateProvider() {
+    _bluetoothService = BluetoothService(this);
+  }
 
   Future<void> init() async {
     if (_isInitialized) return;
@@ -86,6 +98,31 @@ class HeartRateProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> startScan() async {
+    await _bluetoothService.startScan();
+    _isScanning = _bluetoothService.isScanning;
+    _scanResults = _bluetoothService.scanResults;
+    notifyListeners();
+  }
+
+  Future<void> stopScan() async {
+    await _bluetoothService.stopScan();
+    _isScanning = _bluetoothService.isScanning;
+    notifyListeners();
+  }
+
+  Future<void> connectToDevice(ScanResult result) async {
+    await _bluetoothService.connectToDevice(result.device);
+    _isConnected = _bluetoothService.isConnected;
+    notifyListeners();
+  }
+
+  Future<void> disconnect() async {
+    await _bluetoothService.disconnect();
+    _isConnected = _bluetoothService.isConnected;
+    notifyListeners();
+  }
+
   Future<void> clearData() async {
     _heartRateData.clear();
     _currentHeartRate = 0;
@@ -98,5 +135,12 @@ class HeartRateProvider extends ChangeNotifier {
     final data = _heartRateData.toList();
     data.sort((a, b) => b.timestamp.compareTo(a.timestamp)); // Most recent first
     return data.take(limit).toList();
+  }
+
+  // Dispose resources
+  @override
+  void dispose() {
+    _bluetoothService.dispose();
+    super.dispose();
   }
 }
