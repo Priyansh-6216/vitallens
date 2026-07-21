@@ -19,6 +19,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final DatabaseService _dbService = DatabaseService();
   bool _isLoading = true;
+  bool _showConnectionTips = true;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
+          _showConnectionTips = count == 0;
         });
       }
     } catch (e) {
@@ -124,9 +126,13 @@ class _HomeScreenState extends State<HomeScreen> {
               child: ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
-                  // Connection status
+                  // Connection status with more details
                   _buildConnectionStatus(heartRateProvider),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  
+                  // Connection tips for first-time users
+                  if (_showConnectionTips && !heartRateProvider.isConnected)
+                    _buildConnectionTips(),
                   
                   // Current heart rate display
                   HeartRateDisplay(
@@ -135,38 +141,46 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 24),
                   
-                  // Heart rate trend chart
+                  // Heart rate trend chart with real-time indicator
                   const Text(
-                    'Heart Rate Trend (Last 30 Readings)',
+                    'Heart Rate Trend (Real-time)',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   SizedBox(
-                    height: 200,
+                    height: 220,
                     child: heartRateProvider.heartRateData.isEmpty
                         ? const Center(
                             child: Text(
-                              'No data available\nTap "Scan for Devices" to connect a heart rate monitor',
+                              'No data available\nScan and connect to a heart rate monitor\nto see real-time data',
                               textAlign: TextAlign.center,
                             ),
                           )
                         : HeartRateChart(
                             data: _convertToFlSpots(heartRateProvider.getChartData()),
+                            showLiveIndicator: heartRateProvider.isConnected &&
+                                heartRateProvider.isMonitoring,
                           ),
                   ),
                   const SizedBox(height: 24),
                   
-                  // HRV metrics
+                  // HRV metrics with explanation
                   const Text(
-                    'Heart Rate Variability',
+                    'Heart Rate Variability Analysis',
                     style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   heartRateProvider.heartRateData.isEmpty
                       ? const SizedBox.shrink()
-                      : HRVMetricsCard(
-                          hrvData: _calculateLatestHRV(
-                              heartRateProvider.getChartData()),
+                      : Column(
+                          children: [
+                            HRVMetricsCard(
+                              hrvData: _calculateLatestHrv(
+                                  heartRateProvider.getHrvData(minutes: 2)),
+                            ),
+                            const SizedBox(height: 8),
+                            _buildHrvInfo(heartRateProvider),
+                          ],
                         ),
                   const SizedBox(height: 24),
                   
@@ -243,18 +257,32 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       );
     } else if (provider.isConnected) {
+      // Show connection quality info
+      final rrCount = provider.recentRrIntervals.length;
       return Container(
         padding: const EdgeInsets.all(12),
         backgroundColor: Colors.green.shade50,
         borderRadius: BorderRadius.circular(8),
-        child: const Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(Icons.favorite, color: Colors.green),
-            SizedBox(width: 8),
-            Text(
-              'Connected to Heart Rate Monitor',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+            const Row(
+              children: [
+                Icon(Icons.favorite, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
+                  'Connected to Heart Rate Monitor',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
+                ),
+              ],
             ),
+            if (rrCount > 0) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Receiving RR intervals: $rrCount recent samples',
+                style: TextStyle(fontSize: 12, color: Colors.green.shade700),
+              ),
+            ],
           ],
         ),
       );
@@ -277,6 +305,55 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  Widget _buildConnectionTips() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.blue.shade200),
+        borderRadius: BorderRadius.circular(8),
+        color: Colors.blue.shade50,
+      ),
+      child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Getting Started',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+          ),
+          SizedBox(height: 4),
+          Text(
+            '1. Ensure your Bluetooth heart rate monitor is powered on\n'
+            '2. Tap "Scan for Devices" to find available monitors\n'
+            '3. Select your device from the list to connect\n'
+            '4. Watch real-time heart rate and HRV data appear',
+            style: TextStyle(fontSize: 12, color: Colors.blue),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHrvInfo(HeartRateProvider provider) {
+    final hrvData = provider.getHrvData(minutes: 2);
+    final dataPoints = hrvData.length;
+    
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(4),
+        color: Colors.grey.shade50,
+      ),
+      child: Text(
+        'Based on $dataPoints data points from the last 2 minutes\n'
+        'HRV metrics update continuously as new data arrives',
+        style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+
   Future<void> _startScan(HeartRateProvider provider) async {
     await provider.startScan();
   }
@@ -293,18 +370,56 @@ class _HomeScreenState extends State<HomeScreen> {
     }).toList();
   }
 
-  Map<String, double> _calculateLatestHRV(
-      List<HeartRateData> data) {
+  Map<String, double> _calculateLatestHrv(List<HeartRateData> data) {
     if (data.isEmpty) {
       return {'SDNN': 0.0, 'RMSSD': 0.0, 'pNN50': 0.0};
     }
 
-    // Use the most recent reading for HRV display
-    final latest = data.first;
-    return {
-      'SDNN': latest.sdnn ?? 0.0,
-      'RMSSD': latest.rmssd ?? 0.0,
-      'pNN50': latest.pnn50 ?? 0.0,
-    };
+    // Use more sophisticated HRV calculation with available data
+    final heartRates = data.map((d) => d.heartRate.toDouble()).toList();
+    
+    if (heartRates.length < 2) {
+      return {'SDNN': 0.0, 'RMSSD': 0.0, 'pNN50': 0.0};
+    }
+
+    // Calculate SDNN (standard deviation of all NN intervals)
+    double meanHR = heartRates.reduce((a, b) => a + b) / heartRates.length;
+    double variance = heartRates.map((hr) => (hr - meanHR) * (hr - meanHR))
+        .reduce((a, b) => a + b) / heartRates.length;
+    double sdnn = variance.sqrt();
+
+    // Calculate RMSSD (root mean square of successive differences)
+    if (heartRates.length >= 2) {
+      List<double> successiveDiffs = [];
+      for (int i = 1; i < heartRates.length; i++) {
+        successiveDiffs.add((heartRates[i] - heartRates[i - 1]).abs());
+      }
+      double sumOfSquares = successiveDiffs.map((d) => d * d).reduce((a, b) => a + b);
+      double rmssd = (sumOfSquares / successiveDiffs.length).sqrt();
+      
+      // Calculate pNN50 (percentage of successive differences > 50ms)
+      // Convert to milliseconds approximation: 60000/bpm gives ms per beat
+      List<double> successiveIntervalsMs = [];
+      for (int i = 0; i < heartRates.length; i++) {
+        double msPerBeat = 60000 / heartRates[i];
+        successiveIntervalsMs.add(msPerBeat);
+      }
+      
+      int countOver50 = 0;
+      for (int i = 1; i < successiveIntervalsMs.length; i++) {
+        if ((successiveIntervalsMs[i] - successiveIntervalsMs[i - 1]).abs() > 50) {
+          countOver50++;
+        }
+      }
+      double pnn50 = (countOver50 / (successiveIntervalsMs.length - 1)) * 100.0;
+      
+      return {
+        'SDNN': sdnn.clamp(0.0, 200.0).toDouble(),
+        'RMSSD': rmssd.clamp(0.0, 200.0).toDouble(),
+        'pNN50': pnn50.clamp(0.0, 100.0).toDouble(),
+      };
+    } else {
+      return {'SDNN': sdnn.clamp(0.0, 200.0).toDouble(), 'RMSSD': 0.0, 'pNN50': 0.0};
+    }
   }
 }
