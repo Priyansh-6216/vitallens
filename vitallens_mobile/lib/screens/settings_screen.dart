@@ -83,7 +83,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Clear All Data'),
             onTap: () => _showClearDataDialog(context, heartRateProvider),
           ),
-          
+
+          const Divider(),
+
+          // Export options
+          const ListTile(
+            title: Text('Data Export'),
+            subtitle: Text('Export your heart rate data'),
+          ),
+          ListTile(
+            leading: const Icon(Icons.picture_as_pdf),
+            title: const Text('Export as CSV'),
+            onTap: () => _exportAsCsv(context, heartRateProvider),
+          ),
+          ListTile(
+            leading: const Icon(Icons.file_copy),
+            title: const Text('Export as JSON'),
+            onTap: () => _exportAsJson(context, heartRateProvider),
+          ),
+
+          const Divider(),
+
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
@@ -140,5 +160,135 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text('• Local data storage with export capabilities'),
       ],
     );
+  }
+
+  void _exportAsCsv(BuildContext context, HeartRateProvider provider) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          title: Text('Exporting Data'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Preparing CSV export...'),
+              SizedBox(height: 16),
+              CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      );
+
+      // Export data using the provider's export service
+      final result = await provider.exportDataCsv();
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (result['success']) {
+        // Show success message with file path
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Data exported successfully to:\n${result['filePath']}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed: ${result['error']}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.of(context).pop();
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  void _exportAsJson(BuildContext context, HeartRateProvider provider) async {
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          title: Text('Exporting Data'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Preparing JSON export...'),
+              SizedBox(height: 16),
+              CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      );
+
+      // Export data using the provider's export service
+      final result = await provider.exportDataJson();
+
+      // Close loading dialog
+      if (mounted) Navigator.of(context).pop();
+
+      if (result['success']) {
+        // Show success message with file path
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Data exported successfully to:\n${result['filePath']}'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      } else {
+        // Show error message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed: ${result['error']}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Close loading dialog if still open
+      if (mounted) Navigator.of(context).pop();
+
+      // Show error message
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Export failed: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 }

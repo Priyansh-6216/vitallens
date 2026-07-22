@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/bluetooth_service.dart';
+import '../services/export_service.dart';
 import 'package:collection/collection.dart';
 
 class HeartRateData {
@@ -50,6 +51,54 @@ class HeartRateProvider extends ChangeNotifier {
   HeartRateProvider() {
     _bluetoothService = BluetoothService(this);
     _startBatchFlushTimer();
+  }
+
+Future<Map<String, dynamic>> exportDataCsv() async {
+    try {
+      final exportService = ExportService();
+      final file = await exportService.exportToCSV();
+      if (file != null) {
+        return {
+          'success': true,
+          'filePath': file.path,
+          'message': 'Data exported successfully to CSV'
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'No data available to export'
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Failed to export data: $e'
+      };
+    }
+  }
+
+  Future<Map<String, dynamic>> exportDataJson() async {
+    try {
+      final exportService = ExportService();
+      final file = await exportService.exportToJSON();
+      if (file != null) {
+        return {
+          'success': true,
+          'filePath': file.path,
+          'message': 'Data exported successfully to JSON'
+        };
+      } else {
+        return {
+          'success': false,
+          'error': 'No data available to export'
+        };
+      }
+    } catch (e) {
+      return {
+        'success': false,
+        'error': 'Failed to export data: $e'
+      };
+    }
   }
 
   Future<void> init() async {

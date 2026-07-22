@@ -47,6 +47,9 @@ dependencies:
   # For Bluetooth LE (will be used in Day 3)
   flutter_blue_plus: ^1.2.0
 
+  # For internationalization (used in export service)
+  intl: ^0.19.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
