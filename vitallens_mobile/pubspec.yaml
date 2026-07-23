@@ -50,6 +50,9 @@ dependencies:
   # For internationalization (used in export service)
   intl: ^0.19.0
 
+  # For local notifications (Day 6)
+  flutter_local_notifications: ^9.6.6
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

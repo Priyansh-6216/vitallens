@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import '../services/database_service.dart';
 import '../services/bluetooth_service.dart';
 import '../services/export_service.dart';
+import '../services/notification_service.dart';
 import 'package:collection/collection.dart';
 
 class HeartRateData {
@@ -23,17 +24,20 @@ class HeartRateData {
 class HeartRateProvider extends ChangeNotifier {
   final DatabaseService _dbService = DatabaseService();
   late final BluetoothService _bluetoothService;
+  late final NotificationService _notificationService;
   List<HeartRateData> _heartRateData = [];
   bool _isMonitoring = false;
   int _currentHeartRate = 0;
   bool _isInitialized = false;
   bool _isScanning = false;
   bool _isConnected = false;
+  bool _notificationsEnabled = true; // Default to enabled
   List<ScanResult> _scanResults = [];
-  
+  bool _notificationsEnabled = true;
+
   // For real-time charting - keep recent data in memory
   static const int _maxRecentDataPoints = 300; // ~5 minutes at 1Hz
-  
+
   // Batch processing for database writes
   static const int _batchSize = 10;
   final List<HeartRateData> _pendingBatch = [];
@@ -50,7 +54,19 @@ class HeartRateProvider extends ChangeNotifier {
 
   HeartRateProvider() {
     _bluetoothService = BluetoothService(this);
+    _notificationService = NotificationService();
     _startBatchFlushTimer();
+    // Initialize notification service
+    _notificationService.init();
+  }
+
+  /// Set whether notifications are enabled
+  void setNotificationsEnabled(bool enabled) {
+    _notificationsEnabled = enabled;
+    // If disabling notifications, we could clear any pending notifications here if needed
+    if (!enabled) {
+      _notificationService.cancelAllNotifications();
+    }
   }
 
 Future<Map<String, dynamic>> exportDataCsv() async {
@@ -153,13 +169,18 @@ Future<Map<String, dynamic>> exportDataCsv() async {
       _heartRateData.removeRange(0, _heartRateData.length - _maxRecentDataPoints);
     }
     _currentHeartRate = data.heartRate;
-    
+
+    // Check for abnormal heart rate and send notification if needed
+    if (_notificationsEnabled) {
+      _notificationService.checkHeartRate(data.heartRate);
+    }
+
     // Add to batch for database storage
     _pendingBatch.add(data);
-    
+
     // Save to database in batches for better performance
     _maybeFlushBatch();
-    
+
     notifyListeners();
   }
 
@@ -272,6 +293,7 @@ Future<Map<String, dynamic>> exportDataCsv() async {
   void dispose() {
     _flushBatch(); // Flush any remaining data
     _bluetoothService.dispose();
+    _notificationService.dispose();
     super.dispose();
   }
 }

@@ -38,7 +38,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Enable Notifications'),
             subtitle: const Text('Receive alerts for abnormal heart rates'),
             value: _notificationsEnabled,
-            onChanged: (value) => setState(() => _notificationsEnabled = value),
+            onChanged: (value) => setState(() {
+                  _notificationsEnabled = value;
+                  // Update the provider's notification setting
+                  final heartRateProvider =
+                      Provider.of<HeartRateProvider>(context, listen: false);
+                  heartRateProvider.setNotificationsEnabled(value);
+                }),
           ),
           SwitchListTile(
             title: const Text('Share Data'),
@@ -158,6 +164,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text('• Real-time heart rate monitoring'),
         Text('• Heart Rate Variability analysis (SDNN, RMSSD, pNN50)'),
         Text('• Local data storage with export capabilities'),
+        Text('• Abnormal heart rate notifications'),
       ],
     );
   }
@@ -291,4 +298,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
       }
     }
   }
-}
+
+  void _toggleNotifications(BuildContext context, HeartRateProvider provider, bool value) {
+    setState(() => _notificationsEnabled = value);
+    // Update the provider's notification setting
+    // We need to access the provider's notification setting through a method
+    // For now, we'll update it directly by accessing the provider instance
+    // Note: This assumes we have access to the same provider instance
+    // In a more complex app, we might use a different state management approach
+  }
