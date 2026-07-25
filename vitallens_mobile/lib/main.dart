@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/history_screen.dart';
 import 'providers/heart_rate_provider.dart';
 
 void main() {
@@ -24,6 +25,7 @@ class VitalLensApp extends StatelessWidget {
         home: const HomeScreen(),
         routes: {
           '/settings': (context) => const SettingsScreen(),
+          '/history': (context) => const HistoryScreen(),
         },
       ),
     );

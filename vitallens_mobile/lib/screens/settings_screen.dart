@@ -110,6 +110,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
           const Divider(),
 
+          // History & Trends
+          ListTile(
+            leading: const Icon(Icons.show_chart),
+            title: const Text('View History & Trends'),
+            subtitle: Text('Review your historical heart rate data'),
+            onTap: () {
+              Navigator.pushNamed(context, '/history');
+            },
+          ),
+
+          const Divider(),
+
           ListTile(
             leading: const Icon(Icons.info),
             title: const Text('About'),
@@ -165,6 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         Text('• Heart Rate Variability analysis (SDNN, RMSSD, pNN50)'),
         Text('• Local data storage with export capabilities'),
         Text('• Abnormal heart rate notifications'),
+        Text('• Historical data viewing and trends'),
       ],
     );
   }
